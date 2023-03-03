@@ -58,6 +58,8 @@ public class UsersAndPlacesContext : DbContext
 
         public string Info { get; set; } = null!;
 
+        public int UserCount { get; set; }
+
         public string Image { get; set; } = null!;
 
         public string GeoJson { get; set; } = null!;

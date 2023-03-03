@@ -73,8 +73,12 @@ public class UserController : ControllerBase
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
         var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.FirstAsync(u => u.Id == id);
+        var user = await _context.Users.Include(i => i.Places).FirstAsync(u => u.Id == id);
         user.Places = user.Places ?? new List<UsersAndPlacesContext.Place>();
+
+        if(user.Places.Contains(place))
+            return BadRequest("место уже добавлено");
+        place.UserCount++;
         user.Places.Add(place);
         await _context.SaveChangesAsync();
         return new ObjectResult(
@@ -83,16 +87,24 @@ public class UserController : ControllerBase
     }
     [HttpPut("place/delete")]
     [Authorize]
-    public async Task<IActionResult> DeletePlaceAsync(string place)
+    public async Task<IActionResult> DeletePlaceAsync(string placeId)
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
         var user = await _context.Users.Include(s => s.Places).FirstAsync(u => u.Id == id);
+        
         if(user.Places is null)
             return NotFound();
-        var userPlace = user.Places.FirstOrDefault(p => p.Id == place);
-        if(userPlace is null)
+        
+        var place = user.Places.FirstOrDefault(p => p.Id == placeId);
+
+        if(place is null)
             return NotFound();
-        user.Places.Remove(userPlace);
+        
+        user.Places.Remove(place);
+
+        if(place.UserCount > 0)
+            place.UserCount--;
+        
         await _context.SaveChangesAsync();
         return new ObjectResult(
             value: user.AdaptToDto()
