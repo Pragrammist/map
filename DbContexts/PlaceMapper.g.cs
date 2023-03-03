@@ -14,7 +14,8 @@ namespace MAP.DbContexts
                 Categories = p1.Categories == null ? null : p1.Categories.Select<UsersAndPlacesContext.Category, string>(funcMain1),
                 Info = p1.Info,
                 Image = p1.Image,
-                GeoJson = p1.GeoJson
+                GeoJson = p1.GeoJson,
+                UserCount = p1.UserCount
             };
         }
         
@@ -24,7 +25,8 @@ namespace MAP.DbContexts
             {
                 Id = p1.Id,
                 Name = p1.Name,
-                GeoJson = p1.GeoJson
+                GeoJson = p1.GeoJson,
+                UserCount = p1.UserCount
             };
         }
         

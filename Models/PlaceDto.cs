@@ -17,4 +17,7 @@ public class PlaceDto
     public string Image { get; set; } = null!;
 
     public string GeoJson { get; set; } = null!;
+
+    public int UserCount { get; set; }
+
 }
