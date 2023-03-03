@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Mapster;
 
 namespace MAP.Models;
@@ -19,11 +21,9 @@ public class PlaceDto
     public decimal Lon { get; set; }
 }
 
-[AdaptTo(typeof(MAP.DbContexts.UsersAndPlacesContext.Place)), GenerateMapper]
+
 public class CreatePlaceDto
 {
-    public string Id { get; set; } = null!;
-
     public string Name { get; set; } = null!;
 
     public IEnumerable<string> Categories { get; set; } = Enumerable.Empty<string>(); // "Горячие достопримечательности" - сделать такую категорию

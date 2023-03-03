@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MAP.DbContexts;
 using MAP.Models;
 
@@ -11,7 +12,6 @@ namespace MAP.DbContexts
         {
             return p1 == null ? null : new UsersAndPlacesContext.Place()
             {
-                Id = p1.Id,
                 Name = p1.Name,
                 Categories = funcMain1(p1.Categories),
                 Info = p1.Info,

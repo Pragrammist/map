@@ -1,8 +1,9 @@
 using MAP.DbContexts;
 using MAP.Models;
-using MAP.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Mapster;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace MAP.Controllers;
 
@@ -16,9 +17,9 @@ public class PlaceController : ControllerBase
         _context = context;
     }
     [HttpGet]
-    public async Task<IActionResult> GetPlace(string place)
+    public async Task<IActionResult> GetPlace(string id)
     {
-        var placeFromDb = await _context.Places.FindAsync(place);
+        var placeFromDb = await _context.Places.FindAsync(id);
         if(placeFromDb is null)
             return NotFound();
         var placeDto = placeFromDb.AdaptToDto();
@@ -50,7 +51,7 @@ public class PlaceController : ControllerBase
     [HttpGet("category/{category}")]
     public IActionResult SearchByCategory(string category)
     {
-        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name == category) != null);
+        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null);
         return new ObjectResult(
             value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
         );
@@ -60,7 +61,7 @@ public class PlaceController : ControllerBase
     public IActionResult Hot()
     {
         const string HOT_CATEGORY = "hot";
-        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name == HOT_CATEGORY) != null);
+        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null);
         return new ObjectResult(
             value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
         );

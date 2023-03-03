@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using MAP.DbContexts;
 using MAP.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -24,8 +28,10 @@ public class UserController : ControllerBase
     {
         var user = _context.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
 
-        if(user is not null)
-            await Authenticate(login, user.Id);
+        if(user is null)
+            return NotFound();
+        
+        await Authenticate(login, user.Id);
 
         return new ObjectResult(
             value: user.AdaptToDto()
