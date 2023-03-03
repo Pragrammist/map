@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MAP.Controllers;
 
@@ -68,12 +69,13 @@ public class UserController : ControllerBase
     }
     [HttpPut("place")]
     [Authorize]
-    public async Task<IActionResult> AddPlaceAsync(string place)
+    public async Task<IActionResult> AddPlaceAsync(string placeId)
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        var place = await _context.Places.FirstAsync(p => p.Id == placeId);
+        var user = await _context.Users.FirstAsync(u => u.Id == id);
         user.Places = user.Places ?? new List<UsersAndPlacesContext.Place>();
-        user.Places.Add(new UsersAndPlacesContext.Place{Id = place});
+        user.Places.Add(place);
         await _context.SaveChangesAsync();
         return new ObjectResult(
             value: user.AdaptToDto()
@@ -84,7 +86,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeletePlaceAsync(string place)
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        var user = await _context.Users.Include(s => s.Places).FirstAsync(u => u.Id == id);
         if(user.Places is null)
             return NotFound();
         var userPlace = user.Places.FirstOrDefault(p => p.Id == place);
@@ -102,7 +104,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> AddEmailAsync(string email)
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        var user = await _context.Users.FindAsync(id) ?? throw new InvalidOperationException("id when updated email is not work");
         user.Email = email;
         await _context.SaveChangesAsync();
         return new ObjectResult(
