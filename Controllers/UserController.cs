@@ -1,3 +1,4 @@
+using MAP.DbContexts;
 using MAP.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,11 @@ namespace MAP.Controllers;
 [Route("user")]
 public class UserController : ControllerBase
 {
+    UsersAndPlacesContext _context;
+    public UserController(UsersAndPlacesContext context)
+    {
+        _context = context;
+    }
     [HttpPost("login")]
     public IActionResult Login(string password, string login)
     {
@@ -17,7 +23,6 @@ public class UserController : ControllerBase
             value: new UserDto { 
                 Email = "",
                 Name = "",
-                Places = new [] { "place1", "place2" }
             }
         );
     }
@@ -41,7 +46,7 @@ public class UserController : ControllerBase
             value: new UserDto { 
                 Email = "",
                 Name = "",
-                Places = new [] { "place1", "place2" }
+                
             }
         );
     }
@@ -55,7 +60,6 @@ public class UserController : ControllerBase
             value: new UserDto { 
                 Email = "",
                 Name = "",
-                Places = new [] { "place1", "place2" }
             }
         );
     }

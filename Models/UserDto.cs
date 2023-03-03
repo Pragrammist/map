@@ -4,7 +4,7 @@ public class UserDto
 {
     public string Id { get; set; } = null!;
     
-    public IEnumerable<string> Places { get; set; } = Enumerable.Empty<string>();
+    public IEnumerable<PlaceShortDto> Places { get; set; } = Enumerable.Empty<PlaceShortDto>();
 
     public string Name { get; set; } = null!;
 

@@ -1,4 +1,4 @@
-namespace MAP.Models.Entities;
+namespace MAP.Models;
 
 public class PlaceShortDto
 {
