@@ -53,11 +53,13 @@ public class UserController : ControllerBase
     }
     private async Task Authenticate(string login, string id)
     {
+        var role = login == "admin" ? "admin" : "user";
         // создаем один claim
         var claims = new List<Claim>
         {
             new Claim(ClaimsIdentity.DefaultNameClaimType, login),
-            new Claim("id", id)
+            new Claim("id", id),
+            new Claim(ClaimsIdentity.DefaultRoleClaimType, role)
         };
         // создаем объект ClaimsIdentity
         ClaimsIdentity identity = new ClaimsIdentity(claims, "ApplicationCookie", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);

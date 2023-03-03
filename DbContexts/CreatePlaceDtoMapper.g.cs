@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MAP.DbContexts;
+using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using MAP.Models;
 
 namespace MAP.DbContexts
@@ -16,8 +18,7 @@ namespace MAP.DbContexts
                 Categories = funcMain1(p1.Categories),
                 Info = p1.Info,
                 Image = p1.Image,
-                Lat = p1.Lat,
-                Lon = p1.Lon
+                GeoJson = JsonSerializer.Serialize(p1.GeoJson)
             };
         }
         

@@ -6,7 +6,5 @@ public class PlaceShortDto
 
     public string Name { get; set; } = null!;
 
-    public decimal Lat { get; set; }
-
-    public decimal Lon { get; set; }
+    public string GeoJson { get; set; } = null!;
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Mapster;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MAP.Controllers;
 
@@ -68,6 +69,7 @@ public class PlaceController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create(CreatePlaceDto createPlaceDto)
     {
         var place = createPlaceDto.AdaptToPlace();

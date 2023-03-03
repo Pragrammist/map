@@ -60,9 +60,7 @@ public class UsersAndPlacesContext : DbContext
 
         public string Image { get; set; } = null!;
 
-        public decimal Lat { get; set; }
-
-        public decimal Lon { get; set; }
+        public string GeoJson { get; set; } = null!;
     }
     
     public DbSet<User> Users { get; set; } = null!;

@@ -16,9 +16,7 @@ public class PlaceDto
 
     public string Image { get; set; } = null!;
 
-    public decimal Lat { get; set; }
-
-    public decimal Lon { get; set; }
+    public string GeoJson { get; set; } = null!;
 }
 
 
@@ -32,7 +30,6 @@ public class CreatePlaceDto
 
     public string Image { get; set; } = null!;
 
-    public decimal Lat { get; set; }
+    public Object GeoJson { get; set; } = null!;
 
-    public decimal Lon { get; set; }
 }
