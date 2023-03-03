@@ -22,7 +22,6 @@ namespace MAP.DbContexts
             };
         }
         
-        
         private static ICollection<UsersAndPlacesContext.Category> funcMain1(IEnumerable<string> p2)
         {
             
