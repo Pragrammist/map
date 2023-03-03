@@ -6,7 +6,7 @@ public class UserDto
     
     public IEnumerable<PlaceShortDto> Places { get; set; } = Enumerable.Empty<PlaceShortDto>();
 
-    public string Name { get; set; } = null!;
+    public string Login { get; set; } = null!;
 
     public string? Email { get; set; }
 }

@@ -1,5 +1,8 @@
+using System.Security.Claims;
 using MAP.DbContexts;
 using MAP.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,50 +20,85 @@ public class UserController : ControllerBase
         _context = context;
     }
     [HttpPost("login")]
-    public IActionResult Login(string password, string login)
+    public async Task<IActionResult> LoginAsync(string password, string login)
     {
+        var user = _context.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
+
+        if(user is not null)
+            await Authenticate(login, user.Id);
+
         return new ObjectResult(
-            value: new UserDto { 
-                Email = "",
-                Name = "",
-            }
+            value: user.AdaptToDto()
         );
     }
 
     [HttpPost("register")]
-    public IActionResult Register(string password, string login)
+    public async Task<IActionResult> Register(string password, string login)
     {
+        var user = await _context.Users.AddAsync(new UsersAndPlacesContext.User {
+            Password = password,
+            Login = login
+        });
+        await _context.SaveChangesAsync();
+        await Authenticate(login, user.Entity.Id);
         return new ObjectResult(
-            value: new UserDto { 
-                Email = "",
-                Name = "",
-            }
+            value: user.Entity.AdaptToDto()
+        );
+    }
+    private async Task Authenticate(string login, string id)
+    {
+        // создаем один claim
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimsIdentity.DefaultNameClaimType, login),
+            new Claim("id", id)
+        };
+        // создаем объект ClaimsIdentity
+        ClaimsIdentity identity = new ClaimsIdentity(claims, "ApplicationCookie", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
+        // установка аутентификационных куки
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+    }
+    [HttpPut("place")]
+    [Authorize]
+    public async Task<IActionResult> AddPlaceAsync(string place)
+    {
+        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        user.Places = user.Places ?? new List<UsersAndPlacesContext.Place>();
+        user.Places.Add(new UsersAndPlacesContext.Place{Id = place});
+        await _context.SaveChangesAsync();
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+    [HttpPut("place/delete")]
+    [Authorize]
+    public async Task<IActionResult> DeletePlaceAsync(string place)
+    {
+        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        if(user.Places is null)
+            return NotFound();
+        var userPlace = user.Places.FirstOrDefault(p => p.Id == place);
+        if(userPlace is null)
+            return NotFound();
+        user.Places.Remove(userPlace);
+        await _context.SaveChangesAsync();
+        return new ObjectResult(
+            value: user.AdaptToDto()
         );
     }
 
-    [HttpPost("place")]
+    [HttpPut("email")]
     [Authorize]
-    public IActionResult AddPlace(string login, string place)
+    public async Task<IActionResult> AddEmailAsync(string email)
     {
+        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var user = _context.Users.Update(new UsersAndPlacesContext.User {Id = id}).Entity;
+        user.Email = email;
+        await _context.SaveChangesAsync();
         return new ObjectResult(
-            value: new UserDto { 
-                Email = "",
-                Name = "",
-                
-            }
-        );
-    }
-
-
-    [HttpPost("email")]
-    [Authorize]
-    public IActionResult AddEmail(string login, string password, string email)
-    {
-        return new ObjectResult(
-            value: new UserDto { 
-                Email = "",
-                Name = "",
-            }
+            value: user.AdaptToDto()
         );
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using MAP.Models;
+using Mapster;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ public class UsersAndPlacesContext : DbContext
 {
     public UsersAndPlacesContext()
     {
+        
         base.Database.Migrate();
     }
     
@@ -20,13 +22,14 @@ public class UsersAndPlacesContext : DbContext
     
         public ICollection<Place>? Places { get; set; } 
 
-        public string Name { get; set; } = null!;
+        public string Login { get; set; } = null!;
 
         public string Password { get; set; } = null!;
 
         public string? Email { get; set; }
     }
 
+    
     public class Category
     {
         public string Id { get; set; } = null!;
@@ -34,7 +37,8 @@ public class UsersAndPlacesContext : DbContext
         public string Name { get; set; } = null!;
     }
 
-    
+   
+
     public class Place
     {
         public string Id { get; set; } = null!;
@@ -65,6 +69,9 @@ public class UsersAndPlacesContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>().HasIndex(p => p.Login).IsUnique();
+        modelBuilder.Entity<User>().HasIndex(p => p.Email).IsUnique();
+
         base.OnModelCreating(modelBuilder);
         
     }
