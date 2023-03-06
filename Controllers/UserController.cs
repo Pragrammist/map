@@ -30,7 +30,8 @@ public class UserController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync(string password, string login)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
+        var hashedPassword = await _hasher.Hash(password);
+        var user = _context.Users.FirstOrDefault(u => u.Login == login && u.Password == hashedPassword);
 
         if(user is null)
             return NotFound();
