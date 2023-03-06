@@ -1,4 +1,5 @@
 using MAP.DbContexts;
+using MAP.Services;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -19,6 +20,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<UsersAndPlacesContext>(options => { options.UseSqlite($"Data Source=map.db"); });
+builder.Services.AddTransient<PasswordHasher, PasswordHasherImpl>();
 
 var app = builder.Build();
 app.UseStaticFiles(new StaticFileOptions

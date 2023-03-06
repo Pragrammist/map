@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using MAP.DbContexts;
 using MAP.Models;
+using MAP.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -20,9 +21,11 @@ namespace MAP.Controllers;
 public class UserController : ControllerBase
 {
     UsersAndPlacesContext _context;
-    public UserController(UsersAndPlacesContext context)
+    PasswordHasher _hasher;
+    public UserController(UsersAndPlacesContext context, PasswordHasher hasher)
     {
         _context = context;
+        _hasher = hasher;
     }
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync(string password, string login)
@@ -43,7 +46,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Register(string password, string login)
     {
         var user = await _context.Users.AddAsync(new UsersAndPlacesContext.User {
-            Password = password,
+            Password = await _hasher.Hash(password),
             Login = login
         });
         await _context.SaveChangesAsync();
