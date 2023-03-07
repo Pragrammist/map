@@ -18,6 +18,12 @@ public class UsersAndPlacesContext : DbContext
         base.Database.EnsureCreated();
     }
     
+    public class UserAndPlaceBlackList
+    {
+        public string UserId { get; set; } = null!;
+
+        public string PlaceId { get; set; } = null!;
+    }
 
     [Table("users")]
     public class User
@@ -25,13 +31,15 @@ public class UsersAndPlacesContext : DbContext
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public string Id { get; set; } = null!;
     
-        public ICollection<Place>? Places { get; set; } 
+        public ICollection<Place>? LikedPlaces { get; set; } 
 
         public string Login { get; set; } = null!;
 
         public string Password { get; set; } = null!;
 
         public string? Email { get; set; }
+
+        public ICollection<Place>? BlackList { get; set; }
     }
 
     [Table("categories")]
@@ -52,17 +60,21 @@ public class UsersAndPlacesContext : DbContext
     
         public string Name { get; set; } = null!;
 
-        public ICollection<User>? Users { get; set; } 
+        public ICollection<User>? LikedUsers { get; set; } 
+
+        public ICollection<User>? BlacklistUsers { get; set; } 
 
         public ICollection<Category> Categories { get; set; } = Enumerable.Empty<Category>().ToList(); // "Горячие достопримечательности" - сделать такую категорию
 
         public string Info { get; set; } = null!;
 
-        public int UserCount { get; set; }
+        public int LikeUserCount { get; set; }
 
         public string Image { get; set; } = null!;
 
         public string GeoJson { get; set; } = null!;
+
+        public int BlackListCount { get; set; }
     }
     
     public DbSet<User> Users { get; set; } = null!;
@@ -77,7 +89,8 @@ public class UsersAndPlacesContext : DbContext
     {
         modelBuilder.Entity<User>().HasIndex(p => p.Login).IsUnique();
         modelBuilder.Entity<User>().HasIndex(p => p.Email).IsUnique();
-
+        modelBuilder.Entity<User>().HasMany(u => u.BlackList).WithMany(p => p.BlacklistUsers);
+        modelBuilder.Entity<User>().HasMany(u => u.LikedPlaces).WithMany(p => p.LikedUsers);
         base.OnModelCreating(modelBuilder);
         
     }

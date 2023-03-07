@@ -31,7 +31,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> LoginAsync(string password, string login)
     {
         var hashedPassword = await _hasher.Hash(password);
-        var user = _context.Users.FirstOrDefault(u => u.Login == login && u.Password == hashedPassword);
+        var user = _context.Users.Include(u => u.BlackList).Include(u => u.LikedPlaces).FirstOrDefault(u => u.Login == login && u.Password == hashedPassword);
 
         if(user is null)
             return NotFound();
@@ -77,13 +77,13 @@ public class UserController : ControllerBase
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
         var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.Include(i => i.Places).FirstAsync(u => u.Id == id);
-        user.Places = user.Places ?? new List<UsersAndPlacesContext.Place>();
+        var user = await _context.Users.Include(i => i.LikedPlaces).FirstAsync(u => u.Id == id);
+        user.LikedPlaces = user.LikedPlaces ?? new List<UsersAndPlacesContext.Place>();
 
-        if(user.Places.Contains(place))
+        if(user.LikedPlaces.Contains(place))
             return BadRequest("место уже добавлено");
-        place.UserCount++;
-        user.Places.Add(place);
+        place.LikeUserCount++;
+        user.LikedPlaces.Add(place);
         await _context.SaveChangesAsync();
         return new ObjectResult(
             value: user.AdaptToDto()
@@ -94,20 +94,20 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeletePlaceAsync(string placeId)
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = await _context.Users.Include(s => s.Places).FirstAsync(u => u.Id == id);
+        var user = await _context.Users.Include(s => s.LikedPlaces).FirstAsync(u => u.Id == id);
         
-        if(user.Places is null)
+        if(user.LikedPlaces is null)
             return NotFound();
         
-        var place = user.Places.FirstOrDefault(p => p.Id == placeId);
+        var place = user.LikedPlaces.FirstOrDefault(p => p.Id == placeId);
 
         if(place is null)
             return NotFound();
         
-        user.Places.Remove(place);
+        user.LikedPlaces.Remove(place);
 
-        if(place.UserCount > 0)
-            place.UserCount--;
+        if(place.LikeUserCount > 0)
+            place.LikeUserCount--;
         
         await _context.SaveChangesAsync();
         return new ObjectResult(
@@ -115,6 +115,54 @@ public class UserController : ControllerBase
         );
     }
 
+    [HttpPut("blacklist")]
+    [Authorize]
+    public async Task<IActionResult> AddToBlacklistAsync(string placeId)
+    {
+        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var place = await _context.Places.FirstAsync(p => p.Id == placeId);
+        var user = await _context.Users.Include(i => i.BlackList).FirstAsync(u => u.Id == id);
+        user.BlackList = user.BlackList ?? new List<UsersAndPlacesContext.Place>();
+
+        if(user.BlackList.Contains(place))
+            return BadRequest("место уже добавлено");
+        place.BlackListCount++;
+        user.BlackList.Add(place);
+        await _context.SaveChangesAsync();
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+    [HttpPut("blacklist/delete")]
+    [Authorize]
+    public async Task<IActionResult> DeleteFromBlacklistAsync(string placeId)
+    {
+        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var user = await _context.Users.Include(s => s.BlackList).FirstAsync(u => u.Id == id);
+        
+        if(user.BlackList is null)
+            return NotFound();
+        
+        var place = user.BlackList.FirstOrDefault(p => p.Id == placeId);
+
+        if(place is null)
+            return NotFound();
+        
+        user.BlackList.Remove(place);
+
+        if(place.BlackListCount > 0)
+            place.BlackListCount--;
+        
+        await _context.SaveChangesAsync();
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+
+
+    
+
+    
     [HttpPut("email")]
     [Authorize]
     public async Task<IActionResult> AddEmailAsync(string email)

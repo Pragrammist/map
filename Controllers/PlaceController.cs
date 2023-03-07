@@ -5,6 +5,7 @@ using Mapster;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace MAP.Controllers;
 
@@ -20,7 +21,7 @@ public class PlaceController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPlace(string id)
     {
-        var placeFromDb = await _context.Places.FindAsync(id);
+        var placeFromDb = await _context.Places.Include(p => p.Categories).FirstAsync(p => p.Id == id);
         if(placeFromDb is null)
             return NotFound();
         var placeDto = placeFromDb.AdaptToDto();

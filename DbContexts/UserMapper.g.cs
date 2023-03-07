@@ -10,12 +10,12 @@ namespace MAP.DbContexts
             return p1 == null ? null : new UserDto()
             {
                 Id = p1.Id,
-                Places = p1.Places == null ? null : p1.Places.Select<UsersAndPlacesContext.Place, PlaceShortDto>(p => p.AdaptToShortDto()),
+                LikedPlaces = p1.LikedPlaces == null ? null : p1.LikedPlaces.Select<UsersAndPlacesContext.Place, PlaceShortDto>(p => p.AdaptToShortDto()),
                 Login = p1.Login,
-                Email = p1.Email
+                Email = p1.Email,
+                BlackList = p1.BlackList == null ? null : p1.BlackList.Select<UsersAndPlacesContext.Place, PlaceShortDto>(p => p.AdaptToShortDto())
             };
         }
-        
-
+    
     }
 }

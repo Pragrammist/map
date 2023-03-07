@@ -15,7 +15,8 @@ namespace MAP.DbContexts
                 Info = p1.Info,
                 Image = p1.Image,
                 GeoJson = p1.GeoJson,
-                UserCount = p1.UserCount
+                LikeUserCount = p1.LikeUserCount,
+                BlackListCount = p1.BlackListCount
             };
         }
         
@@ -26,13 +27,14 @@ namespace MAP.DbContexts
                 Id = p1.Id,
                 Name = p1.Name,
                 GeoJson = p1.GeoJson,
-                UserCount = p1.UserCount
+                LikeUserCount = p1.LikeUserCount,
+                BlackListCount = p1.BlackListCount
             };
         }
         
         private static string funcMain1(UsersAndPlacesContext.Category p2)
         {
-            return p2 == null ? null : p2.ToString();
+            return p2 == null ? null : p2.Name;
         }
         
         

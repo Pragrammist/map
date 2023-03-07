@@ -7,7 +7,9 @@ public class UserDto
 {
     public string Id { get; set; } = null!;
     
-    public IEnumerable<PlaceShortDto> Places { get; set; } = Enumerable.Empty<PlaceShortDto>();
+    public IEnumerable<PlaceShortDto>? LikedPlaces { get; set; } 
+
+    public IEnumerable<PlaceShortDto>? BlackList { get; set; } 
 
     public string Login { get; set; } = null!;
 

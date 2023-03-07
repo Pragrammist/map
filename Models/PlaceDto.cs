@@ -18,6 +18,6 @@ public class PlaceDto
 
     public string GeoJson { get; set; } = null!;
 
-    public int UserCount { get; set; }
-
+    public int LikeUserCount { get; set; }
+    public int BlackListCount { get; set; }
 }
