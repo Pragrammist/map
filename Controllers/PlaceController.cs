@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MAP.Controllers;
 
@@ -38,35 +39,47 @@ public class PlaceController : ControllerBase
             value: categories // список названий категорий
         );
     }
-
+    bool IsAuth => User?.Identity?.IsAuthenticated ?? false;
     [HttpGet("{search}")]
-    public IActionResult Search(string search)
+    public async Task<IActionResult> Search(string search)
     {
-        var placesFromDb = _context.Places
+        var placesFilteredByQuery = _context.Places
             .Where(p => search.ToLower().Contains(p.Name) || 
                     p.Name.ToLower().Contains(search));
+
+        return IsAuth ? await BlackListFilter(placesFilteredByQuery) : GetObjectResult(placesFilteredByQuery);
+        
+    }
+    IActionResult GetObjectResult(IQueryable<UsersAndPlacesContext.Place> placesFromDb)
+    {
         return new ObjectResult(
             value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
         );
     }
-
-    [HttpGet("category/{category}")]
-    public IActionResult SearchByCategory(string category)
+    async  Task<IActionResult> BlackListFilter(IQueryable<UsersAndPlacesContext.Place> placesFromDb)
     {
-        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null);
-        return new ObjectResult(
-            value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
-        );
+        var userId = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+        var user = await _context.Users.Include(u => u.BlackList).FirstAsync(u => u.Id == userId);
+
+        var blacklist = user.BlackList.Select(u => u.Id);
+
+        var filterByBlacklist = placesFromDb.Where(p => !blacklist.Contains(p.Id));
+
+        return GetObjectResult(filterByBlacklist);
+    }
+    [HttpGet("category/{category}")]
+    public async Task<IActionResult> SearchByCategoryAsync(string category)
+    {
+        var placesFilteredByCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null);
+        return IsAuth ? await BlackListFilter(placesFilteredByCategory) : GetObjectResult(placesFilteredByCategory);
     }
 
     [HttpGet("hot")]
-    public IActionResult Hot()
+    public async Task<IActionResult> HotAsync()
     {
         const string HOT_CATEGORY = "hot";
-        var placesFromDb = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null);
-        return new ObjectResult(
-            value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
-        );
+        var placesFilteredByHotCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null);
+        return IsAuth ? await BlackListFilter(placesFilteredByHotCategory) : GetObjectResult(placesFilteredByHotCategory);
     }
 
     [HttpPost]

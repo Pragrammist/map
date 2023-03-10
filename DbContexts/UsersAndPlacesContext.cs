@@ -31,7 +31,7 @@ public class UsersAndPlacesContext : DbContext
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public string Id { get; set; } = null!;
     
-        public ICollection<Place>? LikedPlaces { get; set; } 
+        public ICollection<Place> LikedPlaces { get; set; } = null!;
 
         public string Login { get; set; } = null!;
 
@@ -39,7 +39,7 @@ public class UsersAndPlacesContext : DbContext
 
         public string? Email { get; set; }
 
-        public ICollection<Place>? BlackList { get; set; }
+        public ICollection<Place> BlackList { get; set; } = null!;
     }
 
     [Table("categories")]
@@ -60,9 +60,9 @@ public class UsersAndPlacesContext : DbContext
     
         public string Name { get; set; } = null!;
 
-        public ICollection<User>? LikedUsers { get; set; } 
+        public ICollection<User> LikedUsers { get; set; } = null!;
 
-        public ICollection<User>? BlacklistUsers { get; set; } 
+        public ICollection<User> BlacklistUsers { get; set; }  = null!;
 
         public ICollection<Category> Categories { get; set; } = Enumerable.Empty<Category>().ToList(); // "Горячие достопримечательности" - сделать такую категорию
 

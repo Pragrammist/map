@@ -77,13 +77,15 @@ public class UserController : ControllerBase
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
         var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.Include(i => i.LikedPlaces).FirstAsync(u => u.Id == id);
+        var user = await _context.Users.Include(i => i.LikedPlaces).Include(u => u.BlackList).FirstAsync(u => u.Id == id);
         user.LikedPlaces = user.LikedPlaces ?? new List<UsersAndPlacesContext.Place>();
+        
 
         if(user.LikedPlaces.Contains(place))
             return BadRequest("место уже добавлено");
         place.LikeUserCount++;
         user.LikedPlaces.Add(place);
+        user.BlackList.Remove(place);
         await _context.SaveChangesAsync();
         return new ObjectResult(
             value: user.AdaptToDto()
@@ -121,13 +123,14 @@ public class UserController : ControllerBase
     {
         var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
         var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.Include(i => i.BlackList).FirstAsync(u => u.Id == id);
+        var user = await _context.Users.Include(i => i.BlackList).Include(u => u.LikedPlaces).FirstAsync(u => u.Id == id);
         user.BlackList = user.BlackList ?? new List<UsersAndPlacesContext.Place>();
-
+        
         if(user.BlackList.Contains(place))
             return BadRequest("место уже добавлено");
         place.BlackListCount++;
         user.BlackList.Add(place);
+        user.LikedPlaces.Remove(place);
         await _context.SaveChangesAsync();
         return new ObjectResult(
             value: user.AdaptToDto()
