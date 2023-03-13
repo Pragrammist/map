@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using static MAP.DbContexts.LINQHelpers;
 
 namespace MAP.Controllers;
 
@@ -14,6 +15,8 @@ namespace MAP.Controllers;
 [Route("place")]
 public class PlaceController : ControllerBase
 {
+    bool IsAuth => User?.Identity?.IsAuthenticated ?? false;
+    string UserId => User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
     readonly UsersAndPlacesContext _context;
     public PlaceController(UsersAndPlacesContext context)
     {
@@ -31,55 +34,65 @@ public class PlaceController : ControllerBase
         );
     }
 
+    
+
     [HttpGet("categories")]
-    public IActionResult GetCategories(int take = 20, int page = 1)
+    public IActionResult GetCategories(int take = 20, int page = 0)
     {
-        var categories = _context.Categories.Skip(take * (page - 1)).Take(20).Select(c => c.Name);
+        var categories = _context.Categories.Skip(take * page).Take(take).Select(c => c.Name);
         return new ObjectResult(
             value: categories // список названий категорий
         );
     }
-    bool IsAuth => User?.Identity?.IsAuthenticated ?? false;
+
     [HttpGet("{search}")]
-    public async Task<IActionResult> Search(string search)
+    public async Task<IActionResult> Search(string search, int page = 0, int take = 20)
     {
         var placesFilteredByQuery = _context.Places
             .Where(p => search.ToLower().Contains(p.Name) || 
                     p.Name.ToLower().Contains(search));
-
-        return IsAuth ? await BlackListFilter(placesFilteredByQuery) : GetObjectResult(placesFilteredByQuery);
+        var blacklistFilter = await BlackListFilter(placesFilteredByQuery);
+        var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
+        return GetObjectResult(orderedByRating);
         
     }
-    IActionResult GetObjectResult(IQueryable<UsersAndPlacesContext.Place> placesFromDb)
-    {
-        return new ObjectResult(
-            value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
-        );
-    }
-    async  Task<IActionResult> BlackListFilter(IQueryable<UsersAndPlacesContext.Place> placesFromDb)
-    {
-        var userId = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = await _context.Users.Include(u => u.BlackList).FirstAsync(u => u.Id == userId);
-
-        var blacklist = user.BlackList.Select(u => u.Id);
-
-        var filterByBlacklist = placesFromDb.Where(p => !blacklist.Contains(p.Id));
-
-        return GetObjectResult(filterByBlacklist);
-    }
+    
+    
     [HttpGet("category/{category}")]
-    public async Task<IActionResult> SearchByCategoryAsync(string category)
+    public async Task<IActionResult> SearchByCategoryAsync(string category, int page = 0, int take = 20)
     {
-        var placesFilteredByCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null);
-        return IsAuth ? await BlackListFilter(placesFilteredByCategory) : GetObjectResult(placesFilteredByCategory);
+        var placesFilteredByCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null).OrderByRatingAndTakeFromPage(page, take);
+        var blacklistFilter = await BlackListFilter(placesFilteredByCategory);
+        var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
+        return GetObjectResult(orderedByRating);
     }
 
     [HttpGet("hot")]
-    public async Task<IActionResult> HotAsync()
+    public async Task<IActionResult> HotAsync(int page = 0, int take = 20)
     {
         const string HOT_CATEGORY = "hot";
-        var placesFilteredByHotCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null);
-        return IsAuth ? await BlackListFilter(placesFilteredByHotCategory) : GetObjectResult(placesFilteredByHotCategory);
+        var placesFilteredByHotCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null).OrderByRatingAndTakeFromPage(page, take);
+        var blacklistFilter = await BlackListFilter(placesFilteredByHotCategory);
+        var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
+        return GetObjectResult(orderedByRating);
+    }
+    [HttpPost("categories")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> AddCategory(string categoryName, string placeId)
+    {
+        var place = await _context.Places.Include(c => c.Categories).FirstOrDefaultAsync(p => p.Id == placeId);
+        if(place is null)
+            return NotFound("place not found");
+
+        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Name == categoryName);
+
+        if(category is null)
+            category = new UsersAndPlacesContext.Category { Name = categoryName};
+        
+        place.Categories.Add(category);
+        await _context.SaveChangesAsync();
+
+        return new ObjectResult(place.AdaptToDto());
     }
 
     [HttpPost]
@@ -96,6 +109,27 @@ public class PlaceController : ControllerBase
             value: res.Entity.AdaptToShortDto()
         );
         
+    }
+
+
+    IActionResult GetObjectResult(IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
+    {
+        return new ObjectResult(
+            value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
+        );
+    }
+    async  Task<IEnumerable<UsersAndPlacesContext.Place>> BlackListFilter(IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
+    {
+        if(!IsAuth)
+            return placesFromDb;
+        
+        var user = await _context.Users.Include(u => u.BlackList).FirstAsync(u => u.Id == UserId);
+
+        var blacklist = user.BlackList.Select(u => u.Id);
+
+        var filterByBlacklist = placesFromDb.Where(p => !blacklist.Contains(p.Id));
+
+        return filterByBlacklist;
     }
 }
 
