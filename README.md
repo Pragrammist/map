@@ -1,1 +1,1 @@
-# map
+Желательно начинать читать с файла UserAndPlacesContex.cs

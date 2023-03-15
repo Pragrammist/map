@@ -23,15 +23,15 @@ namespace MAP.DbContexts
                 Categories = await Categories(p1.Categories, context),
                 Info = p1.Info,
                 Image = p1.Image,
-                GeoJson = JsonSerializer.Serialize(p1.GeoJson)
+                GeoJson = JsonSerializer.Serialize(p1.GeoJson)//в бд хранится json геопозиции
             };
         }
         
         private static async Task<ICollection<UsersAndPlacesContext.Category>> Categories(IEnumerable<string> categories, UsersAndPlacesContext context)
         {
-            //здесь массив строк преобразуется в модель-категорию из бд
+            // здесь массив строк преобразуется в модель-категорию из бд
             // если категория есть просто добавляет в коллекцию-результат
-            // если нет, добавляет ее в бд
+            // если нет, создается новая и помещается в коллекцию
             // Ef core сам видит где новая категория, где нет
             var categoriesResult = new List<UsersAndPlacesContext.Category>();
             foreach(var categoryName in categories)

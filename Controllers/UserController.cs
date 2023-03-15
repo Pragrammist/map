@@ -99,11 +99,11 @@ public class UserController : ControllerBase
         if(place is null)
             return BadRequest("место не найдено");
 
-        if(user.LikedPlaces.Contains(place))
+        if(!AddLikedPlaceLogic(place, user))
             return BadRequest("место уже добавлено");
         
         
-        AddLikedPlaceLogic(place, user);
+        
         
         await _context.SaveChangesAsync();
 
@@ -159,10 +159,8 @@ public class UserController : ControllerBase
         if(place is null)
             return BadRequest("место не найдено");
 
-        if(user.BlackList.Contains(place))
+        if(!AddToBlackListLogic(place, user))
             return BadRequest("место уже добавлено");
-
-        AddToBlackListLogic(place, user);
         
 
         await _context.SaveChangesAsync();
@@ -214,21 +212,42 @@ public class UserController : ControllerBase
         );
     }
 
-    void AddLikedPlaceLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
+    bool AddLikedPlaceLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
     {
+        //бизнес логика
+        //по желанию переместить в другое место
+
+        //когда добавляется место увеличивается счетчик
+        //после добавления места производится попытка
+        //удаления места из черного списка
+        //если таково имеется
+
+        //если место уже есть то ничего не делается
+        //чтобы счетчик зря не трогать
+        
+       
+        if(user.LikedPlaces.Contains(place))
+            return false;
         place.LikeUserCount++;
         user.LikedPlaces.Add(place);
 
         DeleteFromBlackListLogic(user, place.Id);
+        return true;
     }
     bool DeleteLikedPlaceLogic(UsersAndPlacesContext.User user, string placeId)
     {
+        //бизнес логика
+        //по желанию переместить в другое место
+
+
         var placeFromLikedList = user.LikedPlaces.FindById(placeId);
 
 
         if(placeFromLikedList is null)
             return false;
 
+
+        //удаляется место счетчик уменьщается
         user.LikedPlaces.Remove(placeFromLikedList);
 
         if(placeFromLikedList.LikeUserCount > 0)
@@ -236,15 +255,28 @@ public class UserController : ControllerBase
 
         return true;
     }
-    void AddToBlackListLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
+    bool AddToBlackListLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
     {
+        //бизнес логика
+        //по желанию переместить в другое место
+        // при добавлении какого
+
+        //все тоже самое как с любимыми местами но наоборот
+        if(user.BlackList.Contains(place))
+            return false;
+
         place.BlackListCount++;
         user.BlackList.Add(place);
 
         DeleteLikedPlaceLogic(user, place.Id);
+        return true;
     }
     bool DeleteFromBlackListLogic(UsersAndPlacesContext.User user, string placeId)
     {
+        //бизнес логика
+        //по желанию переместить в другое место
+
+        //логика такая же как у любимых мест
         var blackListPlace = user.BlackList.FindById(placeId);
 
         if(blackListPlace is null)
@@ -261,8 +293,8 @@ public class UserController : ControllerBase
     private async Task Authenticate(string login, string id)
     {
         var role = login == "admin" 
-            ? "admin" : 
-            "user";
+            ? "admin" 
+            : "user";
         // создаем один claim
         var claims = new List<Claim>
         {
