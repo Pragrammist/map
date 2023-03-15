@@ -8,16 +8,31 @@ using System;
 using Microsoft.EntityFrameworkCore;
 
 namespace MAP.DbContexts;
-
+//Это класс нужен, чтобы код связать с бд
+//Он из Entity Framework(ORM)
+// https://learn.microsoft.com/ru-ru/ef/core/
 public class UsersAndPlacesContext : DbContext
 {
     public UsersAndPlacesContext(DbContextOptions<UsersAndPlacesContext> options)
             : base(options)
     {
         
-        base.Database.EnsureCreated();
+        base.Database.EnsureCreated(); //создает бд или подключает существующуб
     }
-    
+    // модели которые используются здесь не относятся к бизнеслогике, и нужны для работы ORM
+    // соответственно если проект будет переписывать в более адектввтную архитектур
+    // например по "Чистой архитектура", то эти классы сугубо относятся к деталям реализации самой бд
+    // ОНИ НЕ ЯВЛЯЮТСЯ ЧАСТЬЮ БИЗНЕС ЛОГИКИ
+    // Но т.к в проекте нет репозиториев и пр. что отделяет ее от всего остального
+    // Эти классы используются в контроллерх
+    // Это нужно для более простой разрабоки в начале
+    // если этот код планируется расширить и использовать в комерческих целях
+    // то нужно из контроллеров убрать ссылку на эти классы 
+    // отделить бизнес логику, веб и инфраструктуру(бд, шифрование, микросервисность и пр)
+    // 
+
+    // Если нужно понимание что для чего нужно, то вот документация по фреймворку
+    // https://learn.microsoft.com/ru-ru/ef/core/
     public class UserAndPlaceBlackList
     {
         public string UserId { get; set; } = null!;
@@ -84,7 +99,8 @@ public class UsersAndPlacesContext : DbContext
     public DbSet<Category> Categories { get; set; } = null!;
 
     
-    
+    // https://learn.microsoft.com/ru-ru/ef/core/
+    // 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasIndex(p => p.Login).IsUnique();

@@ -260,7 +260,9 @@ public class UserController : ControllerBase
     
     private async Task Authenticate(string login, string id)
     {
-        var role = login == "admin" ? "admin" : "user";
+        var role = login == "admin" 
+            ? "admin" : 
+            "user";
         // создаем один claim
         var claims = new List<Claim>
         {
