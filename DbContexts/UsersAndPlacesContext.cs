@@ -31,7 +31,7 @@ public class UsersAndPlacesContext : DbContext
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public string Id { get; set; } = null!;
     
-        public ICollection<Place> LikedPlaces { get; set; } = null!;
+        public ICollection<Place> LikedPlaces { get; set; } = new List<Place>();
 
         public string Login { get; set; } = null!;
 
@@ -39,7 +39,7 @@ public class UsersAndPlacesContext : DbContext
 
         public string? Email { get; set; }
 
-        public ICollection<Place> BlackList { get; set; } = null!;
+        public ICollection<Place> BlackList { get; set; } = new List<Place>();
     }
 
     [Table("categories")]
@@ -88,6 +88,7 @@ public class UsersAndPlacesContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasIndex(p => p.Login).IsUnique();
+        modelBuilder.Entity<Category>().HasIndex(p => p.Name).IsUnique();
         modelBuilder.Entity<User>().HasIndex(p => p.Email).IsUnique();
         modelBuilder.Entity<User>().HasMany(u => u.BlackList).WithMany(p => p.BlacklistUsers);
         modelBuilder.Entity<User>().HasMany(u => u.LikedPlaces).WithMany(p => p.LikedUsers);

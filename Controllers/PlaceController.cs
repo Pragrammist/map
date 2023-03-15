@@ -12,11 +12,12 @@ using static MAP.DbContexts.LINQHelpers;
 namespace MAP.Controllers;
 
 [ApiController]
-[Route("place")]
+[Route("places")]
 public class PlaceController : ControllerBase
 {
     bool IsAuth => User?.Identity?.IsAuthenticated ?? false;
-    string UserId => User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
+    string UserId => User.FindFirstValue("id") ?? 
+        throw new HttpRequestException("id is null in identity");
     readonly UsersAndPlacesContext _context;
     public PlaceController(UsersAndPlacesContext context)
     {
@@ -25,7 +26,9 @@ public class PlaceController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPlace(string id)
     {
-        var placeFromDb = await _context.Places.Include(p => p.Categories).FirstAsync(p => p.Id == id);
+        var placeFromDb = await _context.Places
+            .Include(p => p.Categories)
+            .FindByIdAsync(id);
         if(placeFromDb is null)
             return NotFound();
         var placeDto = placeFromDb.AdaptToDto();
@@ -39,7 +42,9 @@ public class PlaceController : ControllerBase
     [HttpGet("categories")]
     public IActionResult GetCategories(int take = 20, int page = 0)
     {
-        var categories = _context.Categories.Skip(take * page).Take(take).Select(c => c.Name);
+        var categories = _context.Categories
+            .TakeByPage(page, take)
+            .SelectCategoriesByName();
         return new ObjectResult(
             value: categories // список названий категорий
         );
@@ -48,12 +53,10 @@ public class PlaceController : ControllerBase
     [HttpGet("{search}")]
     public async Task<IActionResult> Search(string search, int page = 0, int take = 20)
     {
-        var placesFilteredByQuery = _context.Places
-            .Where(p => search.ToLower().Contains(p.Name) || 
-                    p.Name.ToLower().Contains(search));
+        var placesFilteredByQuery = _context.Places.WhereByName(search);
         var blacklistFilter = await BlackListFilter(placesFilteredByQuery);
         var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
-        return GetObjectResult(orderedByRating);
+        return GetManyPlacesObjectResult(orderedByRating);
         
     }
     
@@ -61,37 +64,48 @@ public class PlaceController : ControllerBase
     [HttpGet("category/{category}")]
     public async Task<IActionResult> SearchByCategoryAsync(string category, int page = 0, int take = 20)
     {
-        var placesFilteredByCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == category.ToLower()) != null).OrderByRatingAndTakeFromPage(page, take);
+        var placesFilteredByCategory = _context.Places
+            .Include(p => p.Categories)
+            .WhereByCategory(category);
         var blacklistFilter = await BlackListFilter(placesFilteredByCategory);
         var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
-        return GetObjectResult(orderedByRating);
+        return GetManyPlacesObjectResult(orderedByRating);
     }
 
     [HttpGet("hot")]
     public async Task<IActionResult> HotAsync(int page = 0, int take = 20)
     {
         const string HOT_CATEGORY = "hot";
-        var placesFilteredByHotCategory = _context.Places.Where(p => p.Categories.FirstOrDefault(c => c.Name.ToLower() == HOT_CATEGORY) != null).OrderByRatingAndTakeFromPage(page, take);
+        var placesFilteredByHotCategory = _context.Places
+            .Include(p => p.Categories)
+            .WhereByCategory(HOT_CATEGORY);
         var blacklistFilter = await BlackListFilter(placesFilteredByHotCategory);
         var orderedByRating = blacklistFilter.OrderByRatingAndTakeFromPage(page, take);
-        return GetObjectResult(orderedByRating);
+        return GetManyPlacesObjectResult(orderedByRating);
     }
     [HttpPost("categories")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> AddCategory(string categoryName, string placeId)
     {
-        var place = await _context.Places.Include(c => c.Categories).FirstOrDefaultAsync(p => p.Id == placeId);
+        var place = await _context.Places
+            .Include(c => c.Categories)
+            .FindByIdAsync(placeId);
+        
         if(place is null)
             return NotFound("place not found");
 
-        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Name == categoryName);
+        var category = await _context.Categories.FindByNameAsync(categoryName);
 
         if(category is null)
             category = new UsersAndPlacesContext.Category { Name = categoryName};
         
-        place.Categories.Add(category);
-        await _context.SaveChangesAsync();
+        if(place.Categories.Contains(category))
+            return BadRequest("category already exists");
 
+        place.Categories.Add(category);
+
+        await _context.SaveChangesAsync();
+        
         return new ObjectResult(place.AdaptToDto());
     }
 
@@ -99,7 +113,7 @@ public class PlaceController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create(CreatePlaceDto createPlaceDto)
     {
-        var place = createPlaceDto.AdaptToPlace();
+        var place = await createPlaceDto.AdaptToPlace(_context);
         
         var res = await  _context.Places.AddAsync(place);
 
@@ -112,22 +126,23 @@ public class PlaceController : ControllerBase
     }
 
 
-    IActionResult GetObjectResult(IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
+    IActionResult GetManyPlacesObjectResult(IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
     {
         return new ObjectResult(
-            value: placesFromDb.Select(s => s.AdaptToShortDto()) // список названий мест
+            value: placesFromDb.ProjectToShortDtos() // список названий мест
         );
     }
-    async  Task<IEnumerable<UsersAndPlacesContext.Place>> BlackListFilter(IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
+    async Task<IEnumerable<UsersAndPlacesContext.Place>> BlackListFilter(
+        IEnumerable<UsersAndPlacesContext.Place> placesFromDb)
     {
         if(!IsAuth)
             return placesFromDb;
         
-        var user = await _context.Users.Include(u => u.BlackList).FirstAsync(u => u.Id == UserId);
+        var user = await _context.Users.Include(u => u.BlackList).FindByIdAsync(UserId);
 
-        var blacklist = user.BlackList.Select(u => u.Id);
+        var blacklist = user.BlackList.SelectById();
 
-        var filterByBlacklist = placesFromDb.Where(p => !blacklist.Contains(p.Id));
+        var filterByBlacklist = placesFromDb.FilterByBlackList(blacklist);
 
         return filterByBlacklist;
     }

@@ -20,8 +20,12 @@ namespace MAP.Controllers;
 [Route("user")]
 public class UserController : ControllerBase
 {
-    UsersAndPlacesContext _context;
-    PasswordHasher _hasher;
+    bool IsAuth => User?.Identity?.IsAuthenticated ?? false;
+    string UserId => User.FindFirstValue("id") ?? 
+        throw new HttpRequestException("id is null in identity");
+
+    readonly UsersAndPlacesContext _context;
+    readonly PasswordHasher _hasher;
     public UserController(UsersAndPlacesContext context, PasswordHasher hasher)
     {
         _context = context;
@@ -31,16 +35,17 @@ public class UserController : ControllerBase
     public async Task<IActionResult> LoginAsync(string password, string login)
     {
         var hashedPassword = await _hasher.Hash(password);
-        var user = _context.Users.Include(u => u.BlackList).Include(u => u.LikedPlaces).FirstOrDefault(u => u.Login == login && u.Password == hashedPassword);
+        var user = await _context.Users
+            .Include(u => u.BlackList)
+            .Include(u => u.LikedPlaces)
+            .FindUserByLoginAndPassHash(login, hashedPassword);
 
         if(user is null)
             return NotFound();
         
         await Authenticate(login, user.Id);
 
-        return new ObjectResult(
-            value: user.AdaptToDto()
-        );
+        return new ObjectResult(user.AdaptToDto());
     }
 
     [HttpPost("register")]
@@ -56,6 +61,152 @@ public class UserController : ControllerBase
             value: user.Entity.AdaptToDto()
         );
     }
+    [HttpPut("place")]
+    [Authorize]
+    public async Task<IActionResult> AddPlaceAsync(string placeId)
+    {
+        var place = await _context.Places
+            .FindAsync(placeId);
+
+        var user = await _context.Users
+            .Include(i => i.LikedPlaces)
+            .Include(u => u.BlackList)
+            .FindByIdAsync(UserId);
+        
+        if(place is null)
+            return BadRequest("место не найдено");
+
+        if(user.LikedPlaces.Contains(place))
+            return BadRequest("место уже добавлено");
+        
+        
+        AddLikedPlaceLogic(place, user);
+        
+        await _context.SaveChangesAsync();
+
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+    [HttpPut("place/delete")]
+    [Authorize]
+    public async Task<IActionResult> DeletePlaceAsync(string placeId)
+    {
+        var user = await _context.Users
+            .Include(s => s.LikedPlaces)
+            .FindByIdAsync(UserId);
+        
+        
+        if(!DeleteLikedPlaceLogic(user, placeId))
+            return NotFound();
+        
+        await _context.SaveChangesAsync();
+
+
+        return new ObjectResult(user.AdaptToDto());
+    }
+    
+    [HttpPut("blacklist")]
+    [Authorize]
+    public async Task<IActionResult> AddToBlacklistAsync(string placeId)
+    {
+        var place = await _context.Places.FindAsync(placeId);
+
+        var user = await _context.Users
+            .Include(i => i.BlackList)
+            .Include(u => u.LikedPlaces)
+            .FindByIdAsync(UserId);
+
+        
+        if(place is null)
+            return BadRequest("место не найдено");
+
+        if(user.BlackList.Contains(place))
+            return BadRequest("место уже добавлено");
+
+        AddToBlackListLogic(place, user);
+        
+
+        await _context.SaveChangesAsync();
+
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+    
+    [HttpPut("blacklist/delete")]
+    [Authorize]
+    public async Task<IActionResult> DeleteFromBlacklistAsync(string placeId)
+    {
+        var user = await _context.Users.Include(s => s.BlackList).FindByIdAsync(UserId);
+        
+        if(!DeleteFromBlackListLogic(user, placeId))
+            return NotFound();
+        
+        await _context.SaveChangesAsync();
+
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+    
+    
+    [HttpPut("email")]
+    [Authorize]
+    public async Task<IActionResult> AddEmailAsync(string email)
+    {
+        var user = await _context.Users.FindByIdAsync(UserId);
+        user.Email = email;
+        await _context.SaveChangesAsync();
+        return new ObjectResult(
+            value: user.AdaptToDto()
+        );
+    }
+
+    void AddLikedPlaceLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
+    {
+        place.LikeUserCount++;
+        user.LikedPlaces.Add(place);
+
+        DeleteFromBlackListLogic(user, place.Id);
+    }
+    bool DeleteLikedPlaceLogic(UsersAndPlacesContext.User user, string placeId)
+    {
+        var placeFromLikedList = user.LikedPlaces.FindById(placeId);
+
+
+        if(placeFromLikedList is null)
+            return false;
+
+        user.LikedPlaces.Remove(placeFromLikedList);
+
+        if(placeFromLikedList.LikeUserCount > 0)
+            placeFromLikedList.LikeUserCount--;
+
+        return true;
+    }
+    void AddToBlackListLogic(UsersAndPlacesContext.Place place, UsersAndPlacesContext.User user)
+    {
+        place.BlackListCount++;
+        user.BlackList.Add(place);
+
+        DeleteLikedPlaceLogic(user, place.Id);
+    }
+    bool DeleteFromBlackListLogic(UsersAndPlacesContext.User user, string placeId)
+    {
+        var blackListPlace = user.BlackList.FindById(placeId);
+
+        if(blackListPlace is null)
+            return false;
+        
+        user.BlackList.Remove(blackListPlace);
+
+        if(blackListPlace.BlackListCount > 0)
+            blackListPlace.BlackListCount--;
+
+        return true;
+    }
+    
     private async Task Authenticate(string login, string id)
     {
         var role = login == "admin" ? "admin" : "user";
@@ -67,115 +218,16 @@ public class UserController : ControllerBase
             new Claim(ClaimsIdentity.DefaultRoleClaimType, role)
         };
         // создаем объект ClaimsIdentity
-        ClaimsIdentity identity = new ClaimsIdentity(claims, "ApplicationCookie", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
+        ClaimsIdentity identity = new ClaimsIdentity(
+            claims, 
+            "ApplicationCookie",
+            ClaimsIdentity.DefaultNameClaimType, 
+            ClaimsIdentity.DefaultRoleClaimType
+        );
         // установка аутентификационных куки
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-    }
-    [HttpPut("place")]
-    [Authorize]
-    public async Task<IActionResult> AddPlaceAsync(string placeId)
-    {
-        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.Include(i => i.LikedPlaces).Include(u => u.BlackList).FirstAsync(u => u.Id == id);
-        user.LikedPlaces = user.LikedPlaces ?? new List<UsersAndPlacesContext.Place>();
-        
-
-        if(user.LikedPlaces.Contains(place))
-            return BadRequest("место уже добавлено");
-        place.LikeUserCount++;
-        user.LikedPlaces.Add(place);
-        user.BlackList.Remove(place);
-        await _context.SaveChangesAsync();
-        return new ObjectResult(
-            value: user.AdaptToDto()
-        );
-    }
-    [HttpPut("place/delete")]
-    [Authorize]
-    public async Task<IActionResult> DeletePlaceAsync(string placeId)
-    {
-        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = await _context.Users.Include(s => s.LikedPlaces).FirstAsync(u => u.Id == id);
-        
-        if(user.LikedPlaces is null)
-            return NotFound();
-        
-        var place = user.LikedPlaces.FirstOrDefault(p => p.Id == placeId);
-
-        if(place is null)
-            return NotFound();
-        
-        user.LikedPlaces.Remove(place);
-
-        if(place.LikeUserCount > 0)
-            place.LikeUserCount--;
-        
-        await _context.SaveChangesAsync();
-        return new ObjectResult(
-            value: user.AdaptToDto()
-        );
-    }
-
-    [HttpPut("blacklist")]
-    [Authorize]
-    public async Task<IActionResult> AddToBlacklistAsync(string placeId)
-    {
-        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var place = await _context.Places.FirstAsync(p => p.Id == placeId);
-        var user = await _context.Users.Include(i => i.BlackList).Include(u => u.LikedPlaces).FirstAsync(u => u.Id == id);
-        user.BlackList = user.BlackList ?? new List<UsersAndPlacesContext.Place>();
-        
-        if(user.BlackList.Contains(place))
-            return BadRequest("место уже добавлено");
-        place.BlackListCount++;
-        user.BlackList.Add(place);
-        user.LikedPlaces.Remove(place);
-        await _context.SaveChangesAsync();
-        return new ObjectResult(
-            value: user.AdaptToDto()
-        );
-    }
-    [HttpPut("blacklist/delete")]
-    [Authorize]
-    public async Task<IActionResult> DeleteFromBlacklistAsync(string placeId)
-    {
-        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = await _context.Users.Include(s => s.BlackList).FirstAsync(u => u.Id == id);
-        
-        if(user.BlackList is null)
-            return NotFound();
-        
-        var place = user.BlackList.FirstOrDefault(p => p.Id == placeId);
-
-        if(place is null)
-            return NotFound();
-        
-        user.BlackList.Remove(place);
-
-        if(place.BlackListCount > 0)
-            place.BlackListCount--;
-        
-        await _context.SaveChangesAsync();
-        return new ObjectResult(
-            value: user.AdaptToDto()
-        );
-    }
-
-
-    
-
-    
-    [HttpPut("email")]
-    [Authorize]
-    public async Task<IActionResult> AddEmailAsync(string email)
-    {
-        var id = User.FindFirstValue("id") ?? throw new HttpRequestException("id is null in identity");
-        var user = await _context.Users.FindAsync(id) ?? throw new InvalidOperationException("id when updated email is not work");
-        user.Email = email;
-        await _context.SaveChangesAsync();
-        return new ObjectResult(
-            value: user.AdaptToDto()
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme, 
+            new ClaimsPrincipal(identity)
         );
     }
 }
