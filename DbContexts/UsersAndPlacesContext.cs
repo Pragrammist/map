@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MAP.DbContexts;
 //Это класс нужен, чтобы код связать с бд
-//Он из Entity Framework(ORM)
+//Он из Entity Framework(ORM) - EF CORE(сокращено)
+//
 // https://learn.microsoft.com/ru-ru/ef/core/
 public class UsersAndPlacesContext : DbContext
 {
@@ -31,7 +32,8 @@ public class UsersAndPlacesContext : DbContext
     // отделить бизнес логику, веб и инфраструктуру(бд, шифрование, микросервисность и пр)
     // по желанию модели можно вынести из класса
     // я этого не сделал так как всего один контекст(UsersAndPlacesContext)
-    //
+    // в КОМЕРЧЕСКОЙ разработке
+    // НЕ ИСПОЛЬЗОВАТЬ МОДЕЛИ EF CORE(которые ниже)
 
     // Если нужно понимание что для чего нужно, то вот документация по фреймворку
     // https://learn.microsoft.com/ru-ru/ef/core/
