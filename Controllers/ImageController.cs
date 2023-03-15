@@ -8,6 +8,16 @@ namespace MAP.Controllers;
 public class ImageController : ControllerBase
 {
     const string PLACE_IMAGES_DIR = "PlaceImages";
+
+    /// <summary>
+    /// загрузка файл на сервер.
+    /// </summary>
+    /// <remarks>
+    /// Если нужно показать файл то он находится по пути
+    /// localhost/PlaceImages/название_файла_которое_возвращает_сервер.jpg
+    /// отправлять фото через форму
+    /// </remarks>
+    /// <param name="file">файл виде формы</param>
     [Authorize(Roles = "admin")]
     [HttpPost]
     public async Task<IActionResult> Upload(IFormFile file)
@@ -29,6 +39,12 @@ public class ImageController : ControllerBase
         return Content(imageName);
     }
     
+    /// <summary>
+    /// удаляет.
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    /// <param name="name">названи файла</param>
     [HttpDelete("{name}")]
     [Authorize(Roles = "admin")]
     public IActionResult Delete(string name)

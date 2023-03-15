@@ -31,6 +31,15 @@ public class UserController : ControllerBase
         _context = context;
         _hasher = hasher;
     }
+    /// <summary>
+    /// логинит на на сервере пользователя
+    /// </summary>
+    /// <remarks>
+    /// чтобы воспользоваться нужна залогиниться с логином admin, и его паролем.
+    /// изначально админа нет, его нужно зарегестрировать с логином admin
+    /// </remarks>
+    /// <param name="password">пароль</param>
+    /// <param name="login">логин</param>
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync(string password, string login)
     {
@@ -47,7 +56,13 @@ public class UserController : ControllerBase
 
         return new ObjectResult(user.AdaptToDto());
     }
-
+    /// <summary>
+    /// регестрация новго пользователя
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    /// <param name="password">пароль</param>
+    /// <param name="login">логин</param>
     [HttpPost("register")]
     public async Task<IActionResult> Register(string password, string login)
     {
@@ -61,6 +76,14 @@ public class UserController : ControllerBase
             value: user.Entity.AdaptToDto()
         );
     }
+
+    /// <summary>
+    /// добавляет место пользователю
+    /// </summary>
+    /// <remarks>
+    /// если место есть в черном списке, то оно от туда удаляется
+    /// </remarks>
+    /// <param name="placeId">айдми место</param>
     [HttpPut("place")]
     [Authorize]
     public async Task<IActionResult> AddPlaceAsync(string placeId)
@@ -88,6 +111,14 @@ public class UserController : ControllerBase
             value: user.AdaptToDto()
         );
     }
+
+    /// <summary>
+    /// удаление место из любимых
+    /// </summary>
+    /// <remarks>
+    /// НЕ добавляет место в черный список
+    /// </remarks>
+    /// <param name="placeId">айдми место</param>
     [HttpPut("place/delete")]
     [Authorize]
     public async Task<IActionResult> DeletePlaceAsync(string placeId)
@@ -106,6 +137,13 @@ public class UserController : ControllerBase
         return new ObjectResult(user.AdaptToDto());
     }
     
+    /// <summary>
+    /// добавление места в черный список
+    /// </summary>
+    /// <remarks>
+    /// удаляет место из любимых если такой
+    /// </remarks>
+    /// <param name="placeId">айдми место</param>
     [HttpPut("blacklist")]
     [Authorize]
     public async Task<IActionResult> AddToBlacklistAsync(string placeId)
@@ -134,6 +172,13 @@ public class UserController : ControllerBase
         );
     }
     
+    /// <summary>
+    /// удаление места из черного списка
+    /// </summary>
+    /// <remarks>
+    /// НЕ добавляет место в любимое
+    /// </remarks>
+    /// <param name="placeId">айдми место</param>
     [HttpPut("blacklist/delete")]
     [Authorize]
     public async Task<IActionResult> DeleteFromBlacklistAsync(string placeId)
@@ -150,7 +195,13 @@ public class UserController : ControllerBase
         );
     }
     
-    
+    /// <summary>
+    /// меняет или добавляет новую почту
+    /// </summary>
+    /// <remarks>
+    /// айди берется из кук
+    /// </remarks>
+    /// <param name="email">новая почта</param>
     [HttpPut("email")]
     [Authorize]
     public async Task<IActionResult> AddEmailAsync(string email)
