@@ -41,4 +41,5 @@ public class ImageController : ControllerBase
         System.IO.File.Delete(pathToImg);
         return Ok();
     }
+
 }

@@ -45,9 +45,7 @@ public class PlaceController : ControllerBase
         var categories = _context.Categories
             .TakeByPage(page, take)
             .SelectCategoriesByName();
-        return new ObjectResult(
-            value: categories // список названий категорий
-        );
+        return new ObjectResult(categories);
     }
 
     [HttpGet("{search}")]
