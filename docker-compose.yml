@@ -1,0 +1,12 @@
+version: "3.9" 
+services:
+  map-app:
+    image: map-app
+    ports:
+      - 5000:80
+    
+
+
+    
+
+      

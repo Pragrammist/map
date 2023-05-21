@@ -15,7 +15,7 @@
 .vscode
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
-
+*/PlaceImages
 # Mono auto generated files
 mono_crash.*
 
