@@ -28,7 +28,7 @@ public class PlaceController : ControllerBase
     /// </summary>
     /// <param name="id">айди</param>
     /// <returns>Полную информацию о месте</returns>
-    [HttpGet]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetPlace(string id)
     {
         var placeFromDb = await _context.Places
@@ -42,7 +42,22 @@ public class PlaceController : ControllerBase
         );
     }
 
-    
+    /// <summary>
+    /// Возвращает все места
+    /// </summary>
+    /// <returns>Полную информацию о месте</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetPlaces()
+    {
+        var places =  await _context.Places
+            .Include(p => p.Categories)
+            .Select(s => s.AdaptToDto()).ToListAsync();
+        
+        
+        return new ObjectResult(
+            value: places
+        );
+    }
     /// <summary>
     /// Возвращает категории которые есть
     /// </summary>
