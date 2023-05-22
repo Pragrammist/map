@@ -17,6 +17,7 @@ builder.Services.AddControllers();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie();
 
+builder.Services.AddCors();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer()
                 .AddSwaggerGen(options => {
@@ -47,7 +48,7 @@ app.UseSwagger();
     });
 
 
-
+app.UseCors(b => b.AllowAnyOrigin());
 
 app.UseAuthentication();    // аутентификация
 app.UseAuthorization();     // авторизация
